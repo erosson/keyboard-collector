@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "start": "bash -c \"NODE_ENV=production elm-spa server\" ",
+    "build": "bash -c \"elm-spa build && cp -rp public dist\" "
+  },
+  "devDependencies": {
+    "elm-spa": "^6.0.4"
+  },
+  "dependencies": {
+    "elm": "^0.19.1-5",
+    "elm-format": "^0.8.5",
+    "elm-test": "^0.19.1-revision7"
+  }
+}
