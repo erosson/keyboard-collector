@@ -58,6 +58,16 @@ body,
     border-radius: 1em;
 }
 
+.play-preview {
+    position: absolute;
+    background-color: blue;
+    margin-left: -0.5em;
+    margin-top: -0.5em;
+    width: 1em;
+    height: 1em;
+    border-radius: 1em;
+}
+
 .export {
     height: 100%;
 }

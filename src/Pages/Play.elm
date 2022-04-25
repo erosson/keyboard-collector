@@ -1,7 +1,9 @@
 module Pages.Play exposing (Model, Msg, page)
 
 import Browser.Events
+import Dict exposing (Dict)
 import Effect exposing (Effect)
+import Fifo exposing (Fifo)
 import Gen.Params.Play exposing (Params)
 import Html exposing (..)
 import Html.Attributes as A exposing (..)
@@ -20,7 +22,7 @@ page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
     Page.advanced
         { init = init
-        , update = update
+        , update = update req
         , view = View.shared view shared
         , subscriptions = subscriptions
         }
@@ -35,7 +37,7 @@ type alias Model =
 
 
 type alias OkModel =
-    { pt : Maybe Point
+    { pts : Fifo Point
     , now : Posix
     , updated : Posix
     }
@@ -43,9 +45,7 @@ type alias OkModel =
 
 init : ( Model, Effect Msg )
 init =
-    ( Nothing
-    , Effect.none
-    )
+    ( Nothing, Effect.none )
 
 
 
@@ -55,29 +55,35 @@ init =
 type Msg
     = OnAnimationFrame Posix
     | OnNextPoint Point
+    | OnInitPoints (List Point)
     | OnClick Point
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
+update req msg model =
     case model of
         Nothing ->
-            updateLoading msg
+            updateLoading req msg
 
         Just ok ->
             ok |> updateOk msg |> Tuple.mapFirst Just
 
 
-genPoint : Effect Msg
-genPoint =
-    Random.generate OnNextPoint Model.genPoint |> Effect.fromCmd
-
-
-updateLoading : Msg -> ( Model, Effect Msg )
-updateLoading msg =
+updateLoading : Request.With Params -> Msg -> ( Model, Effect Msg )
+updateLoading req msg =
     case msg of
         OnAnimationFrame now ->
-            ( Just { pt = Nothing, now = now, updated = now }, genPoint )
+            ( Just { pts = Fifo.empty, now = now, updated = now }
+            , let
+                n : Int
+                n =
+                    req.query
+                        |> Dict.get "preview"
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.withDefault 0
+              in
+              Model.genPoint |> Random.list (1 + Basics.max 0 n) |> Random.generate OnInitPoints |> Effect.fromCmd
+            )
 
         _ ->
             ( Nothing, Effect.none )
@@ -90,15 +96,18 @@ updateOk msg model =
             ( { model | now = now }, Effect.none )
 
         OnNextPoint pt ->
-            ( { model | pt = Just pt, updated = model.now }, Effect.none )
+            ( { model | pts = model.pts |> Fifo.insert pt, updated = model.now }, Effect.none )
+
+        OnInitPoints pts ->
+            ( { model | pts = pts |> Fifo.fromList, updated = model.now }, Effect.none )
 
         OnClick pt ->
-            case model.pt of
-                Nothing ->
+            case Fifo.remove model.pts of
+                ( Nothing, _ ) ->
                     ( model, Effect.none )
 
-                Just expected ->
-                    ( { model | pt = Nothing }
+                ( Just expected, pts ) ->
+                    ( { model | pts = pts }
                     , Effect.batch
                         [ Effect.fromCmd <| Random.generate OnNextPoint Model.genPoint
                         , Effect.fromShared <|
@@ -144,19 +153,36 @@ viewOk shared model =
 viewHud : Shared.OkModel -> OkModel -> Html msg
 viewHud shared model =
     div [ class "play-hud" ]
-        [ pre [] [ text "Swipe back to pause\n", shared.logs |> Model.buildStatistics |> Model.renderStatistics |> String.join "\n" |> text ]
-        , case model.pt of
-            Just pt ->
-                viewPt pt
+        (pre [] [ text "Swipe back to pause\n", shared.logs |> Model.buildStatistics |> Model.renderStatistics |> String.join "\n" |> text ]
+            :: (case model.pts |> Fifo.remove of
+                    ( Just pt, previews ) ->
+                        viewPt pt :: viewPreviews (Fifo.toList previews)
 
-            Nothing ->
-                div [] []
-        ]
+                    ( Nothing, previews ) ->
+                        div [] [] :: List.indexedMap (viewPreview (previews |> Fifo.toList |> List.length)) (previews |> Fifo.toList)
+               )
+        )
 
 
 viewPt : Point -> Html msg
 viewPt ( x, y ) =
     div [ class "play-pt", style "top" <| renderPercent y, style "left" <| renderPercent x ] []
+
+
+viewPreviews : List Point -> List (Html msg)
+viewPreviews pts =
+    List.indexedMap (viewPreview (pts |> List.length)) pts
+
+
+viewPreview : Int -> Int -> Point -> Html msg
+viewPreview size index ( x, y ) =
+    div
+        [ class "play-preview"
+        , style "top" <| renderPercent y
+        , style "left" <| renderPercent x
+        , style "opacity" (0.8 * toFloat (size - index) / toFloat size |> String.fromFloat)
+        ]
+        []
 
 
 renderPercent : Float -> String
