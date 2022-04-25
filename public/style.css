@@ -60,12 +60,14 @@ body,
 
 .play-preview {
     position: absolute;
-    background-color: blue;
     margin-left: -0.5em;
     margin-top: -0.5em;
     width: 1em;
     height: 1em;
-    border-radius: 1em;
+    /* https://css-tricks.com/the-shapes-of-css/#aa-triangle-up-shape  */
+    border-left: 0.5em solid transparent;
+    border-right: 0.5em solid transparent;
+    border-bottom: 1em solid blue;
 }
 
 .export {
