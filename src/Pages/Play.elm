@@ -80,7 +80,7 @@ updateLoading req msg =
                     req.query
                         |> Dict.get "preview"
                         |> Maybe.andThen String.toInt
-                        |> Maybe.withDefault 0
+                        |> Maybe.withDefault 2
               in
               Model.genPoint |> Random.list (1 + Basics.max 0 n) |> Random.generate OnInitPoints |> Effect.fromCmd
             )

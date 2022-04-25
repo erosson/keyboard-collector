@@ -26,7 +26,6 @@ view shared _ =
             [ h1 [] [ text "Keyboard data collector" ]
             , pre [] [ shared.logs |> Model.buildStatistics |> Model.renderStatistics |> String.join "\n" |> text ]
             , p [] [ a [ href <| Gen.Route.toHref Gen.Route.Play ] [ text "Start" ] ]
-            , p [] [ a [ href <| Gen.Route.toHref Gen.Route.Play ++ "?preview=2" ] [ text "Start (with previews)" ] ]
             , p [] [ a [ href <| Gen.Route.toHref Gen.Route.Export ] [ text "Export" ] ]
             , p [] [ a [ href <| Gen.Route.toHref Gen.Route.Reset ] [ text "Reset" ] ]
             ]
