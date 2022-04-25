@@ -85,6 +85,20 @@ renderStatistics stats =
         ]
 
 
+renderScore : LogEntry -> List String
+renderScore =
+    List.singleton >> buildStatistics >> renderStatistics >> List.drop 1
+
+
+elapsedSec : Posix -> LogEntry -> Float
+elapsedSec now log =
+    toFloat (Time.posixToMillis now - Time.posixToMillis log.clicked) / 1000
+
+
+
+-- encoders/decoders
+
+
 encodeLogs : List LogEntry -> E.Value
 encodeLogs =
     E.list encodeLog

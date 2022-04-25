@@ -51,11 +51,11 @@ body,
 .play-pt {
     position: absolute;
     background-color: red;
-    margin-left: -0.5em;
-    margin-top: -0.5em;
-    width: 1em;
-    height: 1em;
-    border-radius: 1em;
+    margin-left: -0.75em;
+    margin-top: -0.75em;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
 }
 
 .play-preview {
@@ -64,10 +64,39 @@ body,
     margin-top: -0.5em;
     width: 1em;
     height: 1em;
+    /* circle */
+    /* background-color: blue; */
+    /* border-radius: 50%; */
     /* https://css-tricks.com/the-shapes-of-css/#aa-triangle-up-shape  */
     border-left: 0.5em solid transparent;
     border-right: 0.5em solid transparent;
     border-bottom: 1em solid blue;
+}
+
+.play-postview {
+    position: absolute;
+    margin-left: -0.5em;
+    margin-top: -0.5em;
+    width: 1em;
+    height: 1em;
+}
+
+.play-score {
+    position: absolute;
+}
+
+.play-expected {
+    background-color: orange;
+    border-radius: 50%;
+    opacity: 0.5;
+}
+
+.play-actual {
+    /* https://css-tricks.com/the-shapes-of-css/#aa-triangle-up-shape  */
+    border-left: 0.5em solid transparent;
+    border-right: 0.5em solid transparent;
+    border-top: 1em solid yellow;
+    opacity: 0.5;
 }
 
 .export {

@@ -38,6 +38,7 @@ type alias Model =
 
 type alias OkModel =
     { pts : Fifo Point
+    , animations : List LogEntry
     , now : Posix
     , updated : Posix
     }
@@ -73,7 +74,7 @@ updateLoading : Request.With Params -> Msg -> ( Model, Effect Msg )
 updateLoading req msg =
     case msg of
         OnAnimationFrame now ->
-            ( Just { pts = Fifo.empty, now = now, updated = now }
+            ( Just { pts = Fifo.empty, now = now, updated = now, animations = [] }
             , let
                 n : Int
                 n =
@@ -107,16 +108,20 @@ updateOk msg model =
                     ( model, Effect.none )
 
                 ( Just expected, pts ) ->
-                    ( { model | pts = pts }
+                    let
+                        log : Model.LogEntry
+                        log =
+                            { expected = expected
+                            , actual = pt
+                            , displayed = model.updated
+                            , clicked = model.now
+                            }
+                    in
+                    ( { model | pts = pts, animations = log :: List.filter (isAnimationVisible model.now) model.animations }
                     , Effect.batch
                         [ Effect.fromCmd <| Random.generate OnNextPoint Model.genPoint
                         , Effect.fromShared <|
-                            Shared.OnLogEntry
-                                { expected = expected
-                                , actual = pt
-                                , displayed = model.updated
-                                , clicked = model.now
-                                }
+                            Shared.OnLogEntry log
                         ]
                     )
 
@@ -156,17 +161,76 @@ viewHud shared model =
         (pre [] [ text "Swipe back to pause\n", shared.logs |> Model.buildStatistics |> Model.renderStatistics |> String.join "\n" |> text ]
             :: (case model.pts |> Fifo.remove of
                     ( Just pt, previews ) ->
-                        viewPt pt :: viewPreviews (Fifo.toList previews)
+                        viewPt pt
+                            :: viewPreviews (Fifo.toList previews)
 
                     ( Nothing, previews ) ->
-                        div [] [] :: List.indexedMap (viewPreview (previews |> Fifo.toList |> List.length)) (previews |> Fifo.toList)
+                        div [] []
+                            :: viewPreviews (Fifo.toList previews)
                )
+            ++ viewAnimations model.now model.animations
         )
 
 
 viewPt : Point -> Html msg
 viewPt ( x, y ) =
     div [ class "play-pt", style "top" <| renderPercent y, style "left" <| renderPercent x ] []
+
+
+viewAnimations : Posix -> List LogEntry -> List (Html msg)
+viewAnimations now =
+    List.filterMap (viewAnimation now)
+
+
+animationCycleSecs : Float
+animationCycleSecs =
+    0.8
+
+
+isAnimationVisible : Posix -> LogEntry -> Bool
+isAnimationVisible now log =
+    Model.elapsedSec now log <= animationCycleSecs
+
+
+viewAnimation : Posix -> LogEntry -> Maybe (Html msg)
+viewAnimation now log =
+    let
+        ( ex, ey ) =
+            log.expected
+
+        ( ax, ay ) =
+            log.actual
+
+        cycle : Float
+        cycle =
+            Model.elapsedSec now log / animationCycleSecs
+    in
+    if cycle > 1 then
+        Nothing
+
+    else
+        [ div
+            [ class "play-postview play-expected"
+            , style "top" <| renderPercent ey
+            , style "left" <| renderPercent ex
+            ]
+            []
+        , div
+            [ class "play-postview play-actual"
+            , style "top" <| renderPercent ay
+            , style "left" <| renderPercent ax
+            ]
+            []
+        , pre
+            [ class "play-score"
+            , style "top" <| renderPercent <| ay - cycle * 0.2
+            , style "left" <| renderPercent <| clamp 0 0.65 ax
+            , style "right" <| renderPercent ax
+            ]
+            [ log |> Model.renderScore |> String.join "\n" |> text ]
+        ]
+            |> div [ style "opacity" <| renderPercent <| 0.7 * (1 - cycle) ]
+            |> Just
 
 
 viewPreviews : List Point -> List (Html msg)
@@ -181,6 +245,12 @@ viewPreview size index ( x, y ) =
         , style "top" <| renderPercent y
         , style "left" <| renderPercent x
         , style "opacity" (0.8 * toFloat (size - index) / toFloat size |> String.fromFloat)
+        , style "transform" <|
+            if index == 0 then
+                "scale(1.5)"
+
+            else
+                "unset"
         ]
         []
 
