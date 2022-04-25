@@ -86,17 +86,22 @@ body,
 }
 
 .play-expected {
-    background-color: orange;
-    border-radius: 50%;
     opacity: 0.5;
+    /* circle */
+    /* background-color: orange; */
+    /* border-radius: 50%; */
+    /* https://css-tricks.com/the-shapes-of-css/#aa-triangle-up-shape  */
+    border-left: 0.5em solid transparent;
+    border-right: 0.5em solid transparent;
+    border-top: 1em solid orange;
 }
 
 .play-actual {
+    opacity: 0.5;
     /* https://css-tricks.com/the-shapes-of-css/#aa-triangle-up-shape  */
     border-left: 0.5em solid transparent;
     border-right: 0.5em solid transparent;
     border-top: 1em solid yellow;
-    opacity: 0.5;
 }
 
 .export {
