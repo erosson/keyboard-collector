@@ -15,6 +15,8 @@ type alias LogEntry =
     , actual : Point
     , displayed : Posix
     , clicked : Posix
+    -- hud size; top half of the screen. `Maybe` for compatibility with old saved data
+    , dimensions: Maybe Point
     }
 
 
@@ -107,11 +109,14 @@ encodeLogs =
 encodeLog : LogEntry -> E.Value
 encodeLog log =
     E.object
-        [ ( "expected", encodePoint log.expected )
+        ([ ( "expected", encodePoint log.expected )
         , ( "actual", encodePoint log.actual )
         , ( "displayed", encodePosix log.displayed )
         , ( "clicked", encodePosix log.clicked )
-        ]
+        ] ++ (case log.dimensions of
+            Nothing -> []
+            Just dim -> [("dimensions", encodePoint dim)]
+        ))
 
 
 encodePoint : Point -> E.Value
@@ -131,11 +136,12 @@ decodeLogs =
 
 decodeLog : D.Decoder LogEntry
 decodeLog =
-    D.map4 LogEntry
+    D.map5 LogEntry
         (D.field "expected" decodePoint)
         (D.field "actual" decodePoint)
         (D.field "displayed" decodePosix)
         (D.field "clicked" decodePosix)
+        (D.maybe <| D.field "dimensions" decodePoint)
 
 
 decodePoint : D.Decoder Point

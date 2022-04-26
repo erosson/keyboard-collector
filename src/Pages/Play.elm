@@ -57,7 +57,7 @@ type Msg
     = OnAnimationFrame Posix
     | OnNextPoint Point
     | OnInitPoints (List Point)
-    | OnClick Point
+    | OnClick Point Point
 
 
 update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
@@ -102,7 +102,7 @@ updateOk msg model =
         OnInitPoints pts ->
             ( { model | pts = pts |> Fifo.fromList, updated = model.now }, Effect.none )
 
-        OnClick pt ->
+        OnClick pt dim ->
             case Fifo.remove model.pts of
                 ( Nothing, _ ) ->
                     ( model, Effect.none )
@@ -115,6 +115,7 @@ updateOk msg model =
                             , actual = pt
                             , displayed = model.updated
                             , clicked = model.now
+                            , dimensions = Just dim
                             }
                     in
                     ( { model | pts = pts, animations = log :: List.filter (isAnimationVisible model.now) model.animations }
@@ -265,14 +266,23 @@ viewInput =
     div [ class "play-input", onClickPoint OnClick ] []
 
 
-onClickPoint : (Point -> msg) -> Html.Attribute msg
+onClickPoint : (Point -> Point -> msg) -> Html.Attribute msg
 onClickPoint msg =
-    E.on "click" (decodePointFromClickEvent |> D.map msg)
+    D.map2 msg
+        (decodePointFromClickEvent )
+        (decodeDimensionsFromClickEvent )
+        |> E.on "click"
 
 
 decodePointFromClickEvent : D.Decoder Point
 decodePointFromClickEvent =
     D.map2 Tuple.pair decodeXFromClickEvent decodeYFromClickEvent
+
+decodeDimensionsFromClickEvent : D.Decoder Point
+decodeDimensionsFromClickEvent =
+    D.map2 Tuple.pair
+        (D.at [ "target", "offsetWidth" ] D.float)
+        (D.at [ "target", "offsetHeight" ] D.float)
 
 
 decodePercent : { value : D.Decoder Int, start : D.Decoder Int, size : D.Decoder Int } -> D.Decoder Float
